@@ -10,6 +10,9 @@ def api_home(request, *args, **kwargs):
     """
     DRF API View
     """
-    data = request.data
-    return Response(data)
+    serializer = ProductSerializer(data=request.data)
+    if serializer.is_valid(raise_exception=True):
+        print(serializer.data) 
+        return Response(serializer.data)
+    return Response({'invalid: not good data'},status=400)
  
