@@ -24,7 +24,6 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'owner',
-            
             'pk',
             'title',
             'body',

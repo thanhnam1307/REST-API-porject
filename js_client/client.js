@@ -1,11 +1,16 @@
 const contentContainer = document.getElementById("content-container");
 const loginForm = document.getElementById("login-form");
+const searchForm = document.getElementById("search-form");
 const baseEndpoint = "http://localhost:8000/api";
 if (loginForm) {
   // handle this login form
   loginForm.addEventListener("submit", handleLogin);
 }
 
+if (searchForm) {
+  // handle this login form
+  searchForm.addEventListener("submit", handleSearch);
+}
 function handleLogin(event) {
   event.preventDefault();
   const loginEndpoint = `${baseEndpoint}/token/`;
@@ -28,6 +33,50 @@ function handleLogin(event) {
     })
     .catch((err) => {
       console.log("nam");
+      console.log("err", err);
+    });
+}
+
+function handleSearch(event) {
+  event.preventDefault();
+  let formData = new FormData(searchForm);
+  let data = Object.fromEntries(formData);
+  let searchParams = new URLSearchParams(data);
+  const endpoint = `${baseEndpoint}/search/?${searchParams}`;
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  const authToken = localStorage.getItem("access");
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+  const options = {
+    method: "GET",
+    headers: headers,
+  };
+  fetch(endpoint, options) //  Promise
+    .then((response) => {
+      return response.json();
+    })
+    .then((data) => {
+      const validData = isTokenNotValid(data);
+      if (validData && contentContainer) {
+        contentContainer.innerHTML = "";
+        if (data && data.hits) {
+          let htmlStr = "";
+          for (let result of data.hits) {
+            htmlStr += "<li>" + result.title + "</li>";
+          }
+          contentContainer.innerHTML = htmlStr;
+          if (data.hits.length === 0) {
+            contentContainer.innerHTML = "<p>No results found</p>";
+          }
+        } else {
+          contentContainer.innerHTML = "<p>No results found</p>";
+        }
+      }
+    })
+    .catch((err) => {
       console.log("err", err);
     });
 }
@@ -103,3 +152,49 @@ function getProductList() {
 
 validateJWTToken();
 // getProductList()
+
+const searchClient = algoliasearch(
+  "MW97I2U68P",
+  "7052666044c5461dfbd9dade11ae30a8"
+);
+
+const search = instantsearch({
+  indexName: "cfe_Product",
+  searchClient,
+});
+
+search.addWidgets([
+  instantsearch.widgets.searchBox({
+    container: "#searchbox",
+  }),
+
+  instantsearch.widgets.clearRefinements({
+    container: "#clear-refinements",
+  }),
+
+  instantsearch.widgets.refinementList({
+    container: "#user-list",
+    attribute: "user",
+  }),
+  instantsearch.widgets.refinementList({
+    container: "#public-list",
+    attribute: "public",
+  }),
+
+  instantsearch.widgets.hits({
+    container: "#hits",
+    templates: {
+      item: `
+            <div>
+                <div>{{#helpers.highlight}}{ "attribute": "title" }{{/helpers.highlight}}</div>
+                <div>{{#helpers.highlight}}{ "attribute": "body" }{{/helpers.highlight}}</div>
+                
+                <p>{{ user }}</p><p>\${{ price }}
+            
+            
+            </div>`,
+    },
+  }),
+]);
+
+search.start();
